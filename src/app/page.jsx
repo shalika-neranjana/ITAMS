@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getAccountClient } from "../lib/appwrite";
 import { readSession, signIn, signOut } from "../lib/session.mjs";
+import EmployeeAccess from "../components/employee-access";
 
 export default function Home() {
   const [state, setState] = useState("loading");
@@ -97,7 +98,7 @@ export default function Home() {
           <>
             <h2>Account session active</h2>
             <p>Signed in as {user?.name || "an Appwrite account"}.</p>
-            <p className="notice">Business modules are disabled until employee authorization and the approved access policy are implemented.</p>
+            <EmployeeAccess key={user?.$id} accountId={user?.$id} />
             <button onClick={handleSignOut} disabled={busy}>{busy ? "Signing out…" : "Sign out"}</button>
           </>
         )}

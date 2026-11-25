@@ -11,7 +11,7 @@ This branch starts a clean Next.js App Router application with Appwrite account 
 1. Install Node.js 22 or a newer supported LTS release.
 2. Run `npm install` and review the generated lockfile and dependency audit before committing the lockfile.
 3. Copy `.env.example` to `.env.local`.
-4. Set the public Appwrite project ID from the appropriate development project's console. Register localhost as a Web platform in that project. Use a designated test account and development environment, not production employee credentials.
+4. Set the public Appwrite project ID, database ID and employee table ID from the appropriate development project's console. Register localhost as a Web platform in that project. Use a designated test account and development environment, not production employee credentials.
 5. Run `npm test`, then `npm run dev` and open http://localhost:3000.
 6. Run `npm run build` before proposing a merge.
 
@@ -21,10 +21,11 @@ This branch starts a clean Next.js App Router application with Appwrite account 
 - Session restoration, account identity display, and current-session sign-out.
 - Explicit loading, unavailable-configuration and error states.
 - Unit tests for the session operations using a mocked account adapter.
+- Read-only employee profile status check with fail-closed handling. See [employee access development notes](docs/development/employee-access.md).
 
 ## Security boundary
 
-The current screen validates an Appwrite account session only. It is not a business authorization layer. Do not expose inventory, employee profiles, or administrative operations until the authoritative access-control and data-visibility rules are implemented and tested in the backend. Never use account preferences as proof of an administrative role. Appwrite API keys must remain server-side. No real employee records, credentials or production changes belong in this public repository.
+The current screen validates an Appwrite account session only. It is not a business authorization layer. Do not expose inventory, other employees' profiles, or administrative operations until the authoritative access-control and data-visibility rules are implemented and tested in the backend. Never use account preferences as proof of an administrative role. Appwrite API keys must remain server-side. No real employee records, credentials or production changes belong in this public repository.
 
 ## Before the next milestone
 
