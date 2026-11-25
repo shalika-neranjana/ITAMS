@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { authorizeWorkspace } from '../src/lib/workspace-access.mjs';
+const config = { endpoint: 'https://example.invalid/v1', projectId: 'project', databaseId: 'db', tableId: 'employee_profiles' };
+const auth = 'Bearer test.jwt.token';
+const user = { $id: 'employee-1', status: true };
+const row = { authUserId: user.$id, status: 'active' };
+const reply = (body, status = 200) => new Response(JSON.stringify(body), { status });
+const mock = (account, profile) => async url => url.endsWith('/account') ? account : profile;
+const verify = (account = user, rows = [row]) => authorizeWorkspace(auth, config, mock(reply(account), reply({ rows })));
+test('active employee receives only workspace:view', async () => assert.deepEqual(await verify(), { status: 200, capabilities: ['workspace:view'] }));
+test('missing bearer token fails before upstream request', async () => assert.equal((await authorizeWorkspace('', config, () => assert.fail('unexpected request'))).status, 401));
+test('untrusted HTTP endpoint fails closed', async () => assert.equal((await authorizeWorkspace(auth, { ...config, endpoint: 'http://example.invalid/v1' }, () => assert.fail('unexpected request'))).status, 503));
+test('invalid configuration fails closed', async () => assert.equal((await authorizeWorkspace(auth, { ...config, tableId: '' }, () => assert.fail('unexpected request'))).status, 503));
+test('expired token is unauthorized', async () => assert.equal((await authorizeWorkspace(auth, config, mock(reply({}, 401), null))).status, 401));
+test('disabled account is forbidden', async () => assert.equal((await verify({ ...user, status: false })).status, 403));
+for (const status of ['pending', 'suspended', 'departed', 'unknown']) test(`${status} profile is forbidden`, async () => assert.equal((await verify(user, [{ ...row, status }])).status, 403));
+test('missing and duplicate profiles are forbidden', async () => { assert.equal((await verify(user, [])).status, 403); assert.equal((await verify(user, [row,row])).status, 403); });
+test('another employee profile is forbidden', async () => assert.equal((await verify(user, [{ ...row, authUserId: 'other' }])).status, 403));
+test('malformed upstream response fails closed', async () => assert.equal((await authorizeWorkspace(auth, config, mock(reply(user), reply({ documents: [] })))).status, 503));
+test('network failure fails closed', async () => assert.equal((await authorizeWorkspace(auth, config, async () => { throw Error('network'); })).status, 503));
+test('request is user-scoped, no admin key, no cache or redirects', async () => {
+  const calls = [];
+  const result = await authorizeWorkspace(auth, config, async (url, options) => { calls.push({ url, options }); return url.endsWith('/account') ? reply(user) : reply({ rows: [row] }); });
+  assert.equal(result.status, 200);
+  assert.equal(calls.length, 2);
+  for (const { options } of calls) { assert.equal(options.headers['X-Appwrite-JWT'], 'test.jwt.token'); assert.equal(options.headers['X-Appwrite-Key'], undefined); assert.equal(options.cache, 'no-store'); assert.equal(options.redirect, 'error'); }
+  const queries = new URL(calls[1].url).searchParams.getAll('queries[]').map(JSON.parse);
+  assert.deepEqual(queries[0], { method: 'equal', attribute: 'authUserId', values: [user.$id] });
+});
+test('account preferences cannot grant administrative capabilities', async () => assert.deepEqual((await verify({ ...user, prefs: { role: 'admin' }, labels: ['admin'] })).capabilities, ['workspace:view']));

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getAccountClient } from "../lib/appwrite";
 import { readSession, signIn, signOut } from "../lib/session.mjs";
 import EmployeeAccess from "../components/employee-access";
+import WorkspacePreview from "../components/workspace-preview";
 
 export default function Home() {
   const [state, setState] = useState("loading");
@@ -71,7 +72,7 @@ export default function Home() {
         <h1>NIPO <span>ITAMS</span></h1>
         <p>IT Asset Management System</p>
       </header>
-      <section className="panel" aria-label="Account access">
+      <section className={state === "authenticated" ? "panel panel-wide" : "panel"} aria-label="Account access">
         <p className="stage">Development foundation</p>
         {state === "loading" && <p role="status">Checking account session…</p>}
         {state === "unavailable" && (
@@ -99,6 +100,7 @@ export default function Home() {
             <h2>Account session active</h2>
             <p>Signed in as {user?.name || "an Appwrite account"}.</p>
             <EmployeeAccess key={user?.$id} accountId={user?.$id} />
+            <WorkspacePreview key={user?.$id} accountId={user?.$id} />
             <button onClick={handleSignOut} disabled={busy}>{busy ? "Signing out…" : "Sign out"}</button>
           </>
         )}
